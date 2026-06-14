@@ -37,9 +37,6 @@ This SQL project analyzes Indian unicorn startups using data cleaning, feature e
 * Market Share Analysis
 * Unicorn Success Score Analysis
 
-##  Dataset
-
-Indian Unicorn Startups Dataset (CSV)
 
 ##  How to Run
 
