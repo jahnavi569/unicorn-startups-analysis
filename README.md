@@ -41,7 +41,7 @@ This SQL project analyzes Indian unicorn startups using data cleaning, feature e
 
 Indian Unicorn Startups Dataset (CSV)
 
-## ▶️ How to Run
+##  How to Run
 
 1. Open MySQL Workbench.
 2. Create the database and table structure.
