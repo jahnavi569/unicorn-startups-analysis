@@ -5,18 +5,19 @@ market share, startup segmentation, and advanced SQL analytics.
 
 -- 1. DATABASE SETUP
 
+
 CREATE DATABASE IF NOT EXISTS unicorn_analysis;
 USE unicorn_analysis;
 
 CREATE TABLE unicorns (
-startup_name VARCHAR(100),
-industry VARCHAR(100),
-founding_year INT,
-unicorn_entry_year INT,
-profit_loss_fy22 VARCHAR(100),
-current_valuation VARCHAR(100),
-acquisitions INT,
-status VARCHAR(100)
+    startup_name VARCHAR(100),
+    industry VARCHAR(100),
+    founding_year INT,
+    unicorn_entry_year INT,
+    profit_loss_fy22 VARCHAR(100),
+    current_valuation VARCHAR(100),
+    acquisitions INT,
+    status VARCHAR(100)
 );
 
 SELECT * FROM unicorns;
@@ -33,60 +34,85 @@ ADD COLUMN startup_age INT;
 UPDATE unicorns
 SET valuation_num =
 CASE
-WHEN current_valuation IS NULL
-OR TRIM(current_valuation) = ''
-OR current_valuation = 'NA'
-THEN NULL
-ELSE CAST(
-REPLACE(
-REPLACE(
-REPLACE(TRIM(current_valuation),'$',''),
-' Billion',''),
-',','')
-AS DECIMAL(15,2)
-)
+    WHEN current_valuation IS NULL
+    OR TRIM(current_valuation) = ''
+    OR current_valuation = 'NA'
+    THEN NULL
+    ELSE CAST(
+        REPLACE(
+            REPLACE(
+                REPLACE(TRIM(current_valuation),'$',''),
+            ' Billion',''),
+        ',','')
+    AS DECIMAL(15,2))
 END;
 
 -- Clean profit/loss
+
 UPDATE unicorns
 SET profit_num_billions =
 CASE
-WHEN profit_loss_fy22 LIKE '%Million%' THEN
-CAST(
-REPLACE(
-REPLACE(
-REPLACE(TRIM(profit_loss_fy22),'$',''),
-' Million',''),
-',','')
-AS DECIMAL(15,2)
-) / 1000
 
-WHEN profit_loss_fy22 LIKE '%Billion%' THEN
-    CAST(
+  -- 1. Handle NULL / empty / junk
+  WHEN profit_loss_fy22 IS NULL
+    OR TRIM(profit_loss_fy22) = ''
+    OR UPPER(TRIM(profit_loss_fy22)) IN ('NA','N/A','NULL')
+  THEN NULL
+
+  -- 2. Million values
+  WHEN LOWER(profit_loss_fy22) LIKE '%million%' THEN
+    ROUND(
+      CAST(
         REPLACE(
+          REPLACE(
             REPLACE(
-                REPLACE(TRIM(profit_loss_fy22),'$',''),
-            ' Billion',''),
-        ',','')
-        AS DECIMAL(15,2)
-    )
+              LOWER(TRIM(profit_loss_fy22)),
+            '$',''),
+          'million',''),
+        ' ','')
+      AS DECIMAL(15,4)) / 1000
+    ,4)
 
-ELSE NULL
+  -- 3. Billion values
+  WHEN LOWER(profit_loss_fy22) LIKE '%billion%' THEN
+    ROUND(
+      CAST(
+        REPLACE(
+          REPLACE(
+            REPLACE(
+              LOWER(TRIM(profit_loss_fy22)),
+            '$',''),
+          'billion',''),
+        ' ','')
+      AS DECIMAL(15,4))
+    ,4)
+
+  -- 4. Pure numeric values (handles -29.5, 37.8 etc.)
+  WHEN profit_loss_fy22 REGEXP '^-?[0-9.]+$' THEN
+    CAST(profit_loss_fy22 AS DECIMAL(15,4))
+
+  ELSE NULL
 
 END;
-
 -- Years to unicorn
 UPDATE unicorns
 SET years_to_unicorn =
 CASE
-WHEN unicorn_entry_year >= founding_year
-THEN unicorn_entry_year - founding_year
-ELSE NULL
+    WHEN unicorn_entry_year IS NOT NULL
+     AND founding_year IS NOT NULL
+     AND unicorn_entry_year >= founding_year
+    THEN unicorn_entry_year - founding_year
+    ELSE NULL
 END;
 
 -- Startup age
 UPDATE unicorns
-SET startup_age = YEAR(CURDATE()) - founding_year;
+SET startup_age =
+CASE
+    WHEN founding_year IS NOT NULL
+    THEN YEAR(CURDATE()) - founding_year
+    ELSE NULL
+END;
 
 
 -- 3. GENERAL MARKET OVERVIEW
